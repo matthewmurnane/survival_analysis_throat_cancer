@@ -1,0 +1,48 @@
+LIST OF VARIABLES:
+Variable        Description
+__________________________________________________________________________________
+CASE            Case Number
+
+INST            Participating Institution
+
+SEX             1=male,
+                2=female
+                
+TX Treatment:   1=standard,
+                2=test
+
+GRADE           1=well differentiated,
+                2=moderately differentiated,
+                3=poorly differentiated,
+                9=missing
+                
+AGE             In years at time of diagnosis
+
+COND Condition: 1=no disability,
+                2=restricted work,
+                3=requires assistance with self care,
+                4=bed confined,
+                9=missing
+
+SITE            1=faucial arch,
+                2=tonsillar fossa,
+                3=posterior pillar,
+                4=pharyngeal tongue,
+                5=posterior wall
+
+T_STAGE         1=primary tumor measuring 2 cm or less in largest diameter,
+                2=primary tumor measuring 2 cm to 4 cm in largest diameter with minimal infiltration in depth,
+                3=primary tumor measuring more than 4 cm,
+                4=massive invasive tumor
+                
+N_STAGE         0=no clinical evidence of node metastases,
+                1=single positive node 3 cm or less in diameter, not fixed,
+                2=single positive node more than 3 cm in diameter, not fixed,
+                3=multiple positive nodes or fixed positive nodes
+                
+STATUS          0=censored,
+                1=dead
+                
+ENTRY_DT        Date of study entry: Day of year and year, dddyy
+
+TIME            Survival time in days from day of diagnosis
