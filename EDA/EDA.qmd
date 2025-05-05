@@ -1,0 +1,29 @@
+---
+title: "EDA"
+format: pdf
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+
+library(tidyverse)
+library(ggthemes)
+library(readr)
+library(patchwork)
+library(survival)
+
+pharynx <- read_csv("../data/pharynx.csv")
+```
+
+```{r}
+#How many censor?
+table(pharynx$Status)
+```
+ 53 censored observations
+
+```{r}
+# treatment vs standard
+table(pharynx$Tx)
+```
+
+Pretty balanced. 100 people have the standard treatment and 95 have the test.
