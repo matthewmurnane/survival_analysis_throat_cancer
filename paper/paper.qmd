@@ -1,0 +1,232 @@
+---
+title: "Throat Cancer Analysis"
+author: "Matthew Murnane"
+format:
+  pdf:
+    pdf-engine: xelatex
+    mainfont: "Times New Roman"
+    indent: true
+    fontsize: "12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+
+library(tidyverse)
+library(ggthemes)
+library(readr)
+library(patchwork)
+library(survival)
+library(survminer)
+library(kableExtra)
+library(gridExtra)
+library(MASS)
+
+pharynx <- read_csv("../data/pharynx.csv")
+```
+
+\newpage
+
+\begin{center}
+\Large\textbf{\large Abstract}
+\end{center}
+
+\newpage
+
+\begin{center}
+\Large\textbf{\large Introduction}
+\end{center}
+
+\noindent\textbf{Motivation}
+
+
+
+\noindent\textbf{About the Data}
+
+
+
+\noindent\textbf{Exploratory Data Analysis}
+
+```{r}
+#Status
+pharynx$Status <- factor(pharynx$Status, levels = c(0,1), labels = c("Censored", "Dead"))
+status_summary <- pharynx %>% 
+  count(Status) %>% 
+  pivot_wider(names_from = Status, values_from = n)
+
+#Sex
+pharynx$Sex <- factor(pharynx$Sex, levels = c(1, 2), labels = c("Male", "Female"))
+sex_summary <- pharynx %>%
+  count(Sex) %>%
+  pivot_wider(names_from = Sex, values_from = n)
+
+#Tx
+pharynx$Tx <- factor(pharynx$Tx, levels = c(1,2), labels = c("Standard", "Test"))
+tx_summary <- pharynx %>% 
+  count(Tx) %>% 
+  pivot_wider(names_from = Tx, values_from = n)
+
+#T_Stage
+pharynx$T_Stage <- factor(pharynx$T_Stage, levels = c(1,2,3,4), labels = c("< 2cm", "2cm-4cm", "> 4cm", "massive"))
+t_stage_summary <- pharynx %>% 
+  count(T_Stage) %>% 
+  pivot_wider(names_from = T_Stage, values_from = n)
+
+
+cbind(status_summary, sex_summary, tx_summary, t_stage_summary) %>% 
+  kable(caption = "Distributions Status, Sex, Treatment (Tx), and T\\_Stage") %>% 
+  column_spec(2, border_right = TRUE) %>% 
+  column_spec(4, border_right = TRUE) %>% 
+  column_spec(6, border_right = TRUE) %>% 
+  kable_styling()
+```
+
+The table above shows distributions for variables of interest: Status, Sex, Tx, and T_Stage. We see that we have 53 censored variables. This would mean that `r round(53/(53+140)*100, 2)`% of our observations are censored. There is also a disproportionate number of Males to Females in this study. The treatment (Tx) groups are balanced. T_stage is unbalances with the majority of our cases being severe. That is tumor sizes being either greater than 4cm or classified as massive by the study. This a variable we suspect to affect treatment (Tx) effectiveness.
+
+```{r}
+pharynx <- read_csv("../data/pharynx.csv")
+km_fit1 <- survfit(Surv(Time, Status) ~ Sex, data = pharynx)
+p1 <- ggsurvplot(km_fit1, 
+                 data = pharynx,
+                 conf.int = FALSE,           
+                 risk.table = FALSE,         
+                 ggtheme = theme_few(),
+                 palette = "Set1",
+                 title = "Survival by Sex",
+                 legend.title = "Sex",
+                 legend.labs = c("Male", "Female"),
+                 xlab = "Time (days)",
+                 size=.7) 
+
+# Plot for Treatment
+km_fit2 <- survfit(Surv(Time, Status) ~ Tx, data = pharynx)
+p2 <- ggsurvplot(km_fit2, 
+                 data = pharynx,
+                 conf.int = FALSE,           
+                 risk.table = FALSE,         
+                 ggtheme = theme_few(),
+                 palette = "Set1",
+                 title = "Survival by Treatment",
+                 legend.title = "Treatment",
+                 legend.labs = c("Standard", "Test"),
+                 xlab = "Time (days)",
+                 size =.7)
+
+# Combine both plots (without risk table)
+p1$plot + p2$plot
+```
+Above we have the Kaplan-Meier survival curves stratified by `Sex` and Treatment (`Tx`). Looking at the plot for sex we see that the curves are pretty much on top of each other until later in the study. The plateau in the female group could be a consequence of the smaller sample size. We are not too worried about the divergence between the curves towards the end of the study but will check if Sex violates Proportional Hazard Assumption when we do Cox Regression.
+
+Looking now at the Survival plot for Treatment we see that in the beginning the curves stay on top of each other but by day 300 they diverge with the standard treatment having a higher survival time. They end up aligning again by day 1000 and the survival time for those in the test group end up higher than in the standard.
+
+```{r}
+pharynx <- read_csv("../data/pharynx.csv")
+
+pharynx$T_Stage <- factor(pharynx$T_Stage, levels = c(1,2,3,4), labels = c("<2cm", "2cm-4cm", ">4cm", "massive"))
+
+# Fit Kaplan-Meier model
+km_fit3 <- survfit(Surv(Time, Status) ~ T_Stage, data = pharynx)
+
+# Generate the plot
+p3 <- ggsurvplot(km_fit3,
+           data = pharynx,
+           conf.int = FALSE,
+           risk.table = FALSE,
+           ggtheme = theme_few(),
+           palette = "Set1",
+           title = "Survival Curve by Tumor Stage",
+           xlab = "Time (days)",
+           ylab = "Survival Probability",
+           legend.title = "Tumor Stage",
+           legend.labs = levels(pharynx$T_Stage),
+           size=.7)
+
+p3$plot
+```
+Now looking at the KM-curve stratified by Tumor Stages we see a clear difference in survival times among `T_Stage`. We see the most serious case, a tumor classified as "massive" have the steepest drop off in survival time and remains the lowest through out the study. The next lowest is a tumor classified as being greater than 4 centimeters. This variable will be checked for violation of the proportional hazard assumption when we do cox regression.
+
+\begin{center}
+\Large\textbf{\large Methods}
+\end{center}
+
+Two treatments were provided in this study and its important to assess if one is better than the other. We will use a Stratified Log Rank Test to asses if the new `test` treatment is better than `standard` by controlling for the variable `T_Stage`. Many variables in the study assess a the severity of a patients diagnosis, we believe the `T_Stage` does the best in consolidating that information.
+
+We are then interested in estimating the hazard rate of a patients cancer journey by taking into account all variables included in the study and will do so using Cox Proportional Hazard Model.
+
+\vspace{1.5em}
+\noindent\textbf{Stratified Log Rank Test}
+\vspace{0.5em}
+
+Our null hypotheses is that there is no difference between the hazard functions of treatment groups within each level of `T_Stage`. Our null is that at least one hazard function of treatment differes within a group.
+
+Formally:
+
+\begin{align}
+\text{H}_0:& \quad \lambda_{1}(t|\text{Tx}) = \lambda_{2}(t|\text{Tx}) \quad \forall t,\text{Tx} \\
+\text{H}_1:& \quad \lambda_{1}(t|\text{Tx}) = \theta\lambda_{2}(t|\text{Tx}) \quad \forall t,\text{Tx}
+\end{align}
+
+The assumption of the Log Rank Test are as follows:
+
+\begin{itemize}
+\item Censoring is unrelated to a prognosis.
+\item The survival probabilities are the same for subjects recruited earlier and later in the study
+\item The events happened at the time specified
+\end{itemize}
+
+\noindent\textbf{Cox Proportional Hazard Model}
+
+Cox Proportion Hazard Model takes the form:
+
+$$
+\lambda(t,\vec{x}_i) = \lambda_0(t)\text{exp}(\vec{x}_i\vec\beta)
+$$
+Where $\vec{x}_i$ is the vector of covariates for the $i^{th}$ observation and $\vec\beta$ are the parameters we will estimate with a partial likelihood function. Understand that $\lambda_0(t)$ is the baseline hazard function. It is the risk of failure at time $t$ when all covariates are zero. $\text{exp}(\vec{x}_i\vec\beta)$ is the scaling factor. It is a function of covariates.
+
+\underline{The Proportional Hazard Assumption of Cox Proportional Hazard Model}: Consider two individuals $i$ and $j$, each with their own vector of covariates.
+
+$$
+\frac{\lambda(t, \vec{x}_i)}{\lambda(t, \vec{x}_j)} = \frac{\lambda_0(t)\text{exp}(\vec{x}_i\vec\beta)}{\lambda_0(t)\text{exp}(\vec{x}_j\vec\beta)} = \text{exp}(\vec{\beta}(\vec{x_i}-\vec{x}_j)) = \theta
+$$
+The hazard ratio of two individuals remains proportional over time.
+
+\begin{center}
+\Large\textbf{\large Results}
+\end{center}
+
+\noindent\textbf{Stratified Log Rank Test}
+
+
+\noindent\textbf{Cox Proportional Hazard Model}
+```{r}
+ll1 <- ggsurvplot(km_fit3,
+           fun = "cloglog",
+           palette = "Set1",
+           ggtheme = theme_few(),
+           legend.title = "Tumor Stage",
+           legend.labs = levels(pharynx$T_Stage),
+           title = "log-log Survival Curve by Tumor Stage",
+           size=.7)
+
+ll1$plot
+```
+
+```{r}
+ll2 <- ggsurvplot(km_fit1,
+           fun = "cloglog",
+           palette = "Set1",
+           ggtheme = theme_few(),
+           legend.title = "Sex",
+           legend.labs = c("Male", "Female"),
+           title = "log-log Survival Curve by Sex",
+           size=.7)
+
+ll2$plot
+```
+
+\begin{center}
+\Large\textbf{\large Conclusion}
+\end{center}
+
+
+

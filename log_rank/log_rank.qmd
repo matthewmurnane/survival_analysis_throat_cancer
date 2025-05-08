@@ -1,0 +1,42 @@
+---
+title: "Log Rank for Treatment"
+format: pdf
+---
+
+I will do a stratified log rank test. Where I am controlling for T_stage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+
+library(tidyverse)
+library(ggthemes)
+library(readr)
+library(patchwork)
+library(survival)
+library(survminer)
+library(kableExtra)
+
+pharynx <- read_csv("../data/pharynx.csv")
+```
+
+```{r}
+# Run stratified log-rank test
+log_rank <- survdiff(Surv(Time, Status) ~ Tx + strata(T_Stage), data = pharynx)
+
+# Extract chi-square and p-value
+chisq <- log_rank$chisq
+df <- length(log_rank$n) - 1
+p_val <- 1 - pchisq(chisq, df)
+
+# Create summary table
+summary_table <- data.frame(
+  `Chi-square` = round(chisq, 2),
+  `df` = df,
+  `p-value` = signif(p_val, 3)
+)
+
+# Print as kable
+kable(summary_table, caption = "Stratified Log-Rank Test for Tx controlling for T_Stage")
+
+```
+

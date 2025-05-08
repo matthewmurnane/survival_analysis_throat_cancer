@@ -11,6 +11,7 @@ library(ggthemes)
 library(readr)
 library(patchwork)
 library(survival)
+library(survminer)
 
 pharynx <- read_csv("../data/pharynx.csv")
 ```
@@ -26,4 +27,88 @@ table(pharynx$Status)
 table(pharynx$Tx)
 ```
 
-Pretty balanced. 100 people have the standard treatment and 95 have the test.
+Pretty balanced. 98 people have the standard treatment and 95 have the test.
+
+```{r}
+#sex ratio
+table(pharynx$Sex)
+```
+
+```{r}
+#T_stage
+table(pharynx$T_Stage)
+```
+
+
+a little more than 3 times more men than women
+
+```{r}
+km_fit0 <- survfit(Surv(Time, Status) ~ 1, data = pharynx)
+p0 <- ggsurvplot(km_fit0, 
+                 data = pharynx,
+                 conf.int = TRUE,           
+                 risk.table = FALSE,         
+                 ggtheme = theme_few(),
+                 title = "Kaplan-Meier Survival Curve for All Observations")
+p0[[1]]
+```
+
+```{r}
+pharynx$Sex <- factor(pharynx$Sex, levels = c(1, 2), labels = c("Male", "Female"))
+pharynx$Tx <- factor(pharynx$Tx, levels = c(1, 2), labels = c("Standard", "Test"))
+
+# Plot for Sex
+km_fit1 <- survfit(Surv(Time, Status) ~ Sex, data = pharynx)
+p1 <- ggsurvplot(km_fit1, 
+                 data = pharynx,
+                 conf.int = FALSE,           
+                 risk.table = FALSE,         
+                 ggtheme = theme_few(),
+                 palette = "Set1",
+                 title = "Survival by Sex",
+                 legend.title = "Sex",
+                 legend.labs = c("Male", "Female"))  # Explicit labels
+
+# Plot for Treatment
+km_fit2 <- survfit(Surv(Time, Status) ~ Tx, data = pharynx)
+p2 <- ggsurvplot(km_fit2, 
+                 data = pharynx,
+                 conf.int = FALSE,           
+                 risk.table = FALSE,         
+                 ggtheme = theme_few(),
+                 palette = "Set1",
+                 title = "Survival by Treatment",
+                 legend.title = "Treatment",
+                 legend.labs = c("Standard", "Test"))
+
+# Combine both plots (without risk table)
+p1$plot + p2$plot
+```
+
+```{r}
+# Ensure T_Stage is labeled appropriately
+pharynx$T_Stage <- factor(pharynx$T_Stage, levels = c(1, 2, 3, 4),
+                          labels = c("≤2 cm", 
+                                     "2–4 cm, minimal infiltration", 
+                                     ">4 cm", 
+                                     "Massive invasive tumor"))
+
+# Fit Kaplan-Meier model
+km_fit3 <- survfit(Surv(Time, Status) ~ T_Stage, data = pharynx)
+
+# Generate the plot
+p3 <- ggsurvplot(km_fit3,
+           data = pharynx,
+           conf.int = FALSE,
+           risk.table = FALSE,
+           ggtheme = theme_few(),
+           palette = "Set1",
+           title = "Kaplan-Meier Survival Curve by Tumor Stage",
+           xlab = "Time (days)",
+           ylab = "Survival Probability",
+           legend.title = "Tumor Stage",
+           legend.labs = levels(pharynx$T_Stage))
+
+p3$plot
+```
+
