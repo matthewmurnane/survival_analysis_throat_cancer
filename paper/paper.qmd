@@ -55,21 +55,24 @@ pharynx <- pharynx[!missing_rows,]
 \Large\textbf{\large Abstract}
 \end{center}
 
+We utilize survival analysis methods on data from the Radiation Oncology Group in the United States. We were most interested in seeing if a mix treatment of radiation and chemotherapy had a differing effect then the standard radiation treatment. We considered variable such as sex, site of where the cancer was, and the tumore stage in the anaylsis. Ultimately we found that there were no significant differences in treatment plans even when stratified by variables of interest. A Cox Proportional Hazard Model also yeilded no significant results.
+
 \newpage
 
 \begin{center}
 \Large\textbf{\large Introduction}
 \end{center}
 
+The Radiation Oncology Group in the United States conducted a study in which a primary question was to test the effect that a mix treatment plan of radiation and chemotherapy had compared to that of just radiation on patient survival. For this paper we are interested in how the variables of treatment, sex, site, and tumor stage effect patients survival. We suspect that treatment has differing effects between the levels of sex, site, and T_stage.
 
-
-\noindent\textbf{Motivation}
-
-
+\vspace{1.5em}
 
 \noindent\textbf{About the Data}
 
+The original study included 15 sites of throat and mouth. The one we will conduct analysis on just included three sites in the throat: Faucial Arch, Tonsillar Fossa, and Pharyngeal Tongue, this comprises our variable `Site`. The variable `Tx` is the treatment. 1 is encoded for the standard radiation therapy, 2 is encoded for the test therapy, that is the combined treatments of radiation and chemotherapy. `Sex` variable is self explanatory, 1 is encoded male and 2 is encoded female. `T_stage` had four factor levels these were tumors less than 2cm, tumors between 2cm and 4cm, tumors greater than 4cm and tumors that were encoded as massive. 
+There were two observations that had missing observations in variables that were not used in the paper. These were removed because the scope of the paper had not been decided at the time.
 
+\vspace{1.5em}
 
 \noindent\textbf{Exploratory Data Analysis}
 
@@ -411,15 +414,19 @@ results_df <- data.frame(
   `p-value` = signif(coefs[, "Pr(>|z|)"], 3))
 
 results_df %>%
-  kbl(caption = "Cox Proportional Hazards Model Summary", format = "latex", booktabs = TRUE, row.names = FALSE) %>%
+  kbl(caption = "Cox Proportional Hazards Model Summary Stratified by Site", format = "latex", booktabs = TRUE, row.names = FALSE) %>%
   kable_styling(latex_options = c("hold_position"))
 ```
 
-First we see that none of our coefficients are significant at even the most liberal level of 10%. The model estimates a 19% increase in hazard rate for the `test` treatment. A 6.5% decrease in hazard rate for `Female`. A 25.5% decrease in hazard rate for tumor size between 2cm and 4cm from tumor size less than 2cm. A 0.02% increase in hazard rate from 
+First we see that none of our coefficients are significant at even the most liberal level of 10%. The model estimates a 19% increase in hazard rate for the `test` treatment. A 6.5% decrease in hazard rate for `Female`. A 25.5% decrease in hazard rate for tumor size between 2cm and 4cm from tumor size less than 2cm. A 0.02% increase in hazard rate for size greater than 4cm from the baseline of 2cm. A 60% increase in hazard rate from a tumor classified as massive from the baseline. Although, there was some pretty decent percent increases, none of these are statistically significant and all had what would be considered high p-values.
 
 \begin{center}
-\Large\textbf{\large Conclusion}
+\Large\textbf{\large Conclusion and Discussion}
 \end{center}
 
+We conclude this paper by stating that none of the test we ran were statistically significant. We ran four log rank tests. One just to test whether the hazard rates were different between treatments. That yielded a high p-value. We then suspected that either `Site`, `Sex` or `T_stage` were effecting the out coming of the log rank tests. We stratified for each of the variables and our results were the same. We can conclude that there was no significant difference between radiation treatment and a mixed treatment plan. Even across variables that would suspect effect treatment.
 
+We then ran a Cox Proportional Hazard Model using covariates `Tx`, `T_stage`, and `Sex`. This model was stratified by `Site` because `Site` did not satisfy the proportional hazard model. In the end we found none of our coefficients to be significant.
+
+If we were to revisit this study we would attempt to include more variables that the original data set included. Some variables that would be interesting to explore would be institution that treatment happed at and the condition of the patient during the study.
 
