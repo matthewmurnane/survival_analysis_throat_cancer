@@ -37,5 +37,3 @@ pharynx <- pharynx[!missing_rows,]
 # Finishing up ------------------------------------------------------------
 
 glimpse(pharynx)
-
-write.csv(pharynx, "data/pharynx.csv", row.names = FALSE)

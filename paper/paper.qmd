@@ -14,16 +14,40 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
 
 library(tidyverse)
 library(ggthemes)
-library(readr)
+library(readxl)
 library(patchwork)
 library(survival)
 library(survminer)
 library(kableExtra)
 library(gridExtra)
 library(MASS)
-
-pharynx <- read_csv("../data/pharynx.csv")
 ```
+
+```{r}
+pharynx <- read_excel("../data/pharynx.xls")
+
+pharynx$Case <- as.character(pharynx$Case)
+pharynx$Inst <- as.character(pharynx$Inst)
+pharynx$Sex <- as.factor(pharynx$Sex)
+pharynx$Tx <- as.factor(pharynx$Tx)
+pharynx$Grade <- as.factor(pharynx$Grade)
+pharynx$Cond <- as.factor(pharynx$Cond)
+pharynx$Site <- as.factor(pharynx$Site)
+pharynx$T_Stage <- as.factor(pharynx$T_Stage)
+pharynx$N_Stage <- as.factor(pharynx$N_Stage)
+pharynx$Status <- as.factor(pharynx$Status)
+
+year <- pharynx$Entry_Dt %% 100         
+day <- pharynx$Entry_Dt %/% 100         
+year_full <- 1900 + year
+
+pharynx$Entry_Dt <- as.Date(day - 1, origin = paste0(year_full, "-01-01"))
+
+missing_rows <- pharynx$Cond == "9" | pharynx$Grade == "9"
+
+pharynx <- pharynx[!missing_rows,]
+```
+
 
 \newpage
 
@@ -36,6 +60,8 @@ pharynx <- read_csv("../data/pharynx.csv")
 \begin{center}
 \Large\textbf{\large Introduction}
 \end{center}
+
+
 
 \noindent\textbf{Motivation}
 
@@ -82,21 +108,47 @@ cbind(status_summary, sex_summary, tx_summary, t_stage_summary) %>%
 ```
 
 The table above shows distributions for variables of interest: Status, Sex, Tx, and T_Stage. We see that we have 53 censored variables. This would mean that `r round(53/(53+140)*100, 2)`% of our observations are censored. There is also a disproportionate number of Males to Females in this study. The treatment (Tx) groups are balanced. T_stage is unbalances with the majority of our cases being severe. That is tumor sizes being either greater than 4cm or classified as massive by the study. This a variable we suspect to affect treatment (Tx) effectiveness.
+```{r}
+pharynx <- read_excel("../data/pharynx.xls")
+
+pharynx$Case <- as.character(pharynx$Case)
+pharynx$Inst <- as.character(pharynx$Inst)
+pharynx$Sex <- as.factor(pharynx$Sex)
+pharynx$Tx <- as.factor(pharynx$Tx)
+pharynx$Grade <- as.factor(pharynx$Grade)
+pharynx$Cond <- as.factor(pharynx$Cond)
+pharynx$Site <- as.factor(pharynx$Site)
+pharynx$T_Stage <- as.factor(pharynx$T_Stage)
+pharynx$N_Stage <- as.factor(pharynx$N_Stage)
+
+pharynx$Sex <- factor(pharynx$Sex, levels = c(1, 2), labels = c("Male", "Female"))
+pharynx$Tx <- factor(pharynx$Tx, levels = c(1,2), labels = c("Standard", "Test"))
+
+year <- pharynx$Entry_Dt %% 100         
+day <- pharynx$Entry_Dt %/% 100         
+year_full <- 1900 + year
+
+pharynx$Entry_Dt <- as.Date(day - 1, origin = paste0(year_full, "-01-01"))
+
+missing_rows <- pharynx$Cond == "9" | pharynx$Grade == "9"
+
+pharynx <- pharynx[!missing_rows,]
+```
+
 
 ```{r}
-pharynx <- read_csv("../data/pharynx.csv")
 km_fit1 <- survfit(Surv(Time, Status) ~ Sex, data = pharynx)
 p1 <- ggsurvplot(km_fit1, 
-                 data = pharynx,
                  conf.int = FALSE,           
                  risk.table = FALSE,         
                  ggtheme = theme_few(),
                  palette = "Set1",
                  title = "Survival by Sex",
-                 legend.title = "Sex",
+                 legend.title = "",
                  legend.labs = c("Male", "Female"),
                  xlab = "Time (days)",
-                 size=.7) 
+                 size=.7,
+                 censor = FALSE) 
 
 # Plot for Treatment
 km_fit2 <- survfit(Surv(Time, Status) ~ Tx, data = pharynx)
@@ -107,10 +159,11 @@ p2 <- ggsurvplot(km_fit2,
                  ggtheme = theme_few(),
                  palette = "Set1",
                  title = "Survival by Treatment",
-                 legend.title = "Treatment",
+                 legend.title = "",
                  legend.labs = c("Standard", "Test"),
                  xlab = "Time (days)",
-                 size =.7)
+                 size =.7,
+                 censor = FALSE)
 
 # Combine both plots (without risk table)
 p1$plot + p2$plot
@@ -120,8 +173,6 @@ Above we have the Kaplan-Meier survival curves stratified by `Sex` and Treatment
 Looking now at the Survival plot for Treatment we see that in the beginning the curves stay on top of each other but by day 300 they diverge with the standard treatment having a higher survival time. They end up aligning again by day 1000 and the survival time for those in the test group end up higher than in the standard.
 
 ```{r}
-pharynx <- read_csv("../data/pharynx.csv")
-
 pharynx$T_Stage <- factor(pharynx$T_Stage, levels = c(1,2,3,4), labels = c("<2cm", "2cm-4cm", ">4cm", "massive"))
 
 # Fit Kaplan-Meier model
@@ -137,19 +188,53 @@ p3 <- ggsurvplot(km_fit3,
            title = "Survival Curve by Tumor Stage",
            xlab = "Time (days)",
            ylab = "Survival Probability",
-           legend.title = "Tumor Stage",
+           legend.title = "",
            legend.labs = levels(pharynx$T_Stage),
-           size=.7)
+           size=.7,
+           censor = FALSE)
 
 p3$plot
 ```
 Now looking at the KM-curve stratified by Tumor Stages we see a clear difference in survival times among `T_Stage`. We see the most serious case, a tumor classified as "massive" have the steepest drop off in survival time and remains the lowest through out the study. The next lowest is a tumor classified as being greater than 4 centimeters. This variable will be checked for violation of the proportional hazard assumption when we do cox regression.
 
+```{r}
+pharynx$Site <- factor(
+  pharynx$Site,
+  levels = c("1", "2", "3", "4", "5"),
+  labels = c(
+    "Faucial Arch",
+    "Tonsillar Fossa",
+    "Posterior Pillar",
+    "Pharyngeal Tongue",
+    "Posterior Wall"))
+
+# Fit Kaplan-Meier model
+km_fit4 <- survfit(Surv(Time, Status) ~ Site, data = pharynx)
+
+# Generate the plot
+p4 <- ggsurvplot(km_fit4,
+           data = pharynx,
+           conf.int = FALSE,
+           risk.table = FALSE,
+           ggtheme = theme_few(),
+           palette = "Set1",
+           title = "Survival Curve by Site",
+           xlab = "Time (days)",
+           ylab = "Survival Probability",
+           legend.title = "",
+           legend.labs = c("Faucial Arch", "Tonsillar Fossa", "Pharyngeal Tongue"),
+           size=.7,
+           censor = FALSE)
+
+p4$plot
+```
+Above we have the Survival curves for `Site`. They are mostly similar other than around day 400 by the suffers of Facial Arch. All the curves plateau together at .25 around day 1000. It does not look like these variables are significantly different.
+
 \begin{center}
 \Large\textbf{\large Methods}
 \end{center}
 
-Two treatments were provided in this study and its important to assess if one is better than the other. We will use a Stratified Log Rank Test to asses if the new `test` treatment is better than `standard` by controlling for the variable `T_Stage`. Many variables in the study assess a the severity of a patients diagnosis, we believe the `T_Stage` does the best in consolidating that information.
+Two treatments were provided in this study and its important to assess if one is better than the other. We will use a Stratified Log Rank Test to asses if the new `test` treatment is better than `standard` by controlling for the variable `T_Stage`. Many variables in the study assess a the severity of a patients diagnosis, we believe the `T_Stage` does the best in consolidating that information. Other variables of that we will stratify will be `Sex` and `Site`.
 
 We are then interested in estimating the hazard rate of a patients cancer journey by taking into account all variables included in the study and will do so using Cox Proportional Hazard Model.
 
@@ -157,7 +242,7 @@ We are then interested in estimating the hazard rate of a patients cancer journe
 \noindent\textbf{Stratified Log Rank Test}
 \vspace{0.5em}
 
-Our null hypotheses is that there is no difference between the hazard functions of treatment groups within each level of `T_Stage`. Our null is that at least one hazard function of treatment differes within a group.
+Our null hypotheses is that there is no difference between the hazard functions of treatment groups within each level of `T_Stage`. Our null is that at least one hazard function of treatment differs within a group.
 
 Formally:
 
@@ -196,33 +281,141 @@ The hazard ratio of two individuals remains proportional over time.
 
 \noindent\textbf{Stratified Log Rank Test}
 
+Our first Log Rank test only considered treatment (`Tx`). It yielded a p-value of .291. We will fail to reject the null that the treatments have differing hazard rates.
+
+```{r}
+# Log Rank Strata T_Stage
+log_rank0 <- survdiff(Surv(Time, Status) ~ Tx, data = pharynx)
+
+chisq <- log_rank0$chisq
+df <- length(log_rank0$n) - 1
+p_val <- 1 - pchisq(chisq, df)
+
+d0 <- data.frame(
+  `Chi-square` = round(chisq, 2),
+  `df` = df,
+  `p-value` = signif(p_val, 3)
+)
+
+kable(d0, caption = "Stratified Log-Rank Test for Tx")
+```
+
+We also ran Log Rank Tests stratified for `T_Stage`, `Sex`, and `Site`. As you can see none of them were found to be significant. Thus we fail to reject the null that the hazard rates between `Tx` within their respective groups differ.
+
+```{r}
+log_rank1 <- survdiff(Surv(Time, Status) ~ Tx + strata(T_Stage), data = pharynx)
+log_rank2 <- survdiff(Surv(Time, Status) ~ Tx + strata(Sex), data = pharynx)
+log_rank3 <- survdiff(Surv(Time, Status) ~ Tx + strata(Site), data = pharynx)
+
+chisq <- log_rank1$chisq
+df <- length(log_rank1$n) - 1
+p_val <- 1 - pchisq(chisq, df)
+d1 <- data.frame(`Chi-square` = round(chisq, 2),
+                 `df` = df,
+                 `p-value` = signif(p_val, 3))
+
+chisq <- log_rank2$chisq
+df <- length(log_rank2$n) - 1
+p_val <- 1 - pchisq(chisq, df)
+d2 <- data.frame(`Chi-square` = round(chisq, 2),
+                 `df` = df,
+                 `p-value` = signif(p_val, 3))
+
+cchisq <- log_rank3$chisq
+df <- length(log_rank3$n) - 1
+p_val <- 1 - pchisq(chisq, df)
+d3 <- data.frame(`Chi-square` = round(chisq, 2),
+                 `df` = df,
+                 `p-value` = signif(p_val, 3))
+
+cbind(d1,d2,d3) %>% 
+  kable(caption = "Log Rank Results for T\\_Stage, Sex, and Site") %>% 
+  column_spec(3, border_right = TRUE) %>% 
+  column_spec(6, border_right = TRUE) %>% 
+  kable_styling()
+```
+
+
 
 \noindent\textbf{Cox Proportional Hazard Model}
+
+Below we check the proportion hazard assumption using log-log survival curves one our three variables of interest. We see in the first graph `T_Stage` is proportional for all factors except tumors < 2cm. The < 2cm red line is very step like. This makes us think that the small size of the group is contributing to it not being proportional to the rest. `Sex`, although it crosses several time is basically on top of each other and considering it's long rank was insignificant I would assume its $\theta$ to be 1. 
+
 ```{r}
 ll1 <- ggsurvplot(km_fit3,
            fun = "cloglog",
            palette = "Set1",
            ggtheme = theme_few(),
-           legend.title = "Tumor Stage",
+           legend.title = "",
            legend.labs = levels(pharynx$T_Stage),
-           title = "log-log Survival Curve by Tumor Stage",
-           size=.7)
+           title = "log-log for Tumor Stage",
+           size=.7,
+           censor = FALSE)
 
-ll1$plot
-```
+ll1_plot <- ll1$plot
 
-```{r}
 ll2 <- ggsurvplot(km_fit1,
            fun = "cloglog",
            palette = "Set1",
            ggtheme = theme_few(),
-           legend.title = "Sex",
+           legend.title = "",
            legend.labs = c("Male", "Female"),
-           title = "log-log Survival Curve by Sex",
-           size=.7)
+           title = "log-log for Sex",
+           size=.7,
+           censor = FALSE)
 
-ll2$plot
+ll2_plot <- ll2$plot
+
+ll3 <- ggsurvplot(km_fit4,
+           fun = "cloglog",
+           palette = "Set1",
+           ggtheme = theme_few(),
+           legend.title = "",
+           legend.labs = c("Faucial Arch", "Tonsillar Fossa", "Pharyngeal Tongue"),
+           title = "log-log for Site",
+           size=.7,
+           censor = FALSE)
+
+ll3_plot <- ll3$plot
+
+ll4 <- ggsurvplot(km_fit2,
+           fun = "cloglog",
+           palette = "Set1",
+           ggtheme = theme_few(),
+           legend.title = "",
+           legend.labs = c("Standard", "Test"),
+           title = "log-log for Tx",
+           size=.7,
+           censor = FALSE)
+
+ll4_plot <- ll4$plot
+
+(ll1_plot + ll2_plot)
 ```
+`Faucial Arch` violates the PH assumption. It crosses both levels. Lastly `Tx` crosses at day 100 and seems to diverge around day 300. The divergences is not severe considering the log-log emerges at the end. None of the graphs show a perfect proportional hazard but none of them, except `Site`, are exceptional in their violation. We will run a Cox Proportional Hazard Model with stratified by `Site` with `Tx` ,`Sex`, and `T_Stage` as standard covariates.
+
+```{r}
+ll3_plot + ll4_plot
+```
+
+```{r}
+cox_model <- coxph(Surv(Time, Status) ~ Tx + Sex + T_Stage + strata(Site), data = pharynx)
+summary_cox_model <- summary(cox_model)
+
+coefs <- summary_cox_model$coefficients
+
+results_df <- data.frame(
+  Variable = rownames(coefs),
+  Coefficient = round(coefs[, "coef"], 3),
+  `Hazard Ratio` = round(coefs[, "exp(coef)"], 3),
+  `p-value` = signif(coefs[, "Pr(>|z|)"], 3))
+
+results_df %>%
+  kbl(caption = "Cox Proportional Hazards Model Summary", format = "latex", booktabs = TRUE, row.names = FALSE) %>%
+  kable_styling(latex_options = c("hold_position"))
+```
+
+First we see that none of our coefficients are significant at even the most liberal level of 10%. The model estimates a 19% increase in hazard rate for the `test` treatment. A 6.5% decrease in hazard rate for `Female`. A 25.5% decrease in hazard rate for tumor size between 2cm and 4cm from tumor size less than 2cm. A 0.02% increase in hazard rate from 
 
 \begin{center}
 \Large\textbf{\large Conclusion}

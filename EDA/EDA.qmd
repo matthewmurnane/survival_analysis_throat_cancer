@@ -67,7 +67,8 @@ p1 <- ggsurvplot(km_fit1,
                  palette = "Set1",
                  title = "Survival by Sex",
                  legend.title = "Sex",
-                 legend.labs = c("Male", "Female"))  # Explicit labels
+                 legend.labs = levels(pharynx$Sex),
+                 size = .7)
 
 # Plot for Treatment
 km_fit2 <- survfit(Surv(Time, Status) ~ Tx, data = pharynx)
@@ -79,7 +80,8 @@ p2 <- ggsurvplot(km_fit2,
                  palette = "Set1",
                  title = "Survival by Treatment",
                  legend.title = "Treatment",
-                 legend.labs = c("Standard", "Test"))
+                 legend.labs = levels(pharynx$Tx),
+                 size = .7)
 
 # Combine both plots (without risk table)
 p1$plot + p2$plot
@@ -107,7 +109,8 @@ p3 <- ggsurvplot(km_fit3,
            xlab = "Time (days)",
            ylab = "Survival Probability",
            legend.title = "Tumor Stage",
-           legend.labs = levels(pharynx$T_Stage))
+           legend.labs = levels(pharynx$T_Stage),
+           size = .7)
 
 p3$plot
 ```
