@@ -151,7 +151,8 @@ p1 <- ggsurvplot(km_fit1,
                  legend.labs = c("Male", "Female"),
                  xlab = "Time (days)",
                  size=.7,
-                 censor = FALSE) 
+                 censor = FALSE,
+                 linetype = c("solid", "dashed")) 
 
 # Plot for Treatment
 km_fit2 <- survfit(Surv(Time, Status) ~ Tx, data = pharynx)
@@ -166,7 +167,8 @@ p2 <- ggsurvplot(km_fit2,
                  legend.labs = c("Standard", "Test"),
                  xlab = "Time (days)",
                  size =.7,
-                 censor = FALSE)
+                 censor = FALSE,
+                 linetype = c("solid", "dashed"))
 
 # Combine both plots (without risk table)
 p1$plot + p2$plot
@@ -194,7 +196,8 @@ p3 <- ggsurvplot(km_fit3,
            legend.title = "",
            legend.labs = levels(pharynx$T_Stage),
            size=.7,
-           censor = FALSE)
+           censor = FALSE,
+           linetype = c("solid", "dashed", "dotted", "dotdash"))
 
 p3$plot
 ```
@@ -227,7 +230,8 @@ p4 <- ggsurvplot(km_fit4,
            legend.title = "",
            legend.labs = c("Faucial Arch", "Tonsillar Fossa", "Pharyngeal Tongue"),
            size=.7,
-           censor = FALSE)
+           censor = FALSE,
+           linetype = c("solid", "dashed", "dotted"))
 
 p4$plot
 ```
@@ -353,7 +357,8 @@ ll1 <- ggsurvplot(km_fit3,
            legend.labs = levels(pharynx$T_Stage),
            title = "log-log for Tumor Stage",
            size=.7,
-           censor = FALSE)
+           censor = FALSE,
+           linetype = c("solid", "dashed", "dotted", "dotdash"))
 
 ll1_plot <- ll1$plot
 
@@ -365,7 +370,8 @@ ll2 <- ggsurvplot(km_fit1,
            legend.labs = c("Male", "Female"),
            title = "log-log for Sex",
            size=.7,
-           censor = FALSE)
+           censor = FALSE,
+           linetype = c("solid", "dashed"))
 
 ll2_plot <- ll2$plot
 
@@ -377,7 +383,8 @@ ll3 <- ggsurvplot(km_fit4,
            legend.labs = c("Faucial Arch", "Tonsillar Fossa", "Pharyngeal Tongue"),
            title = "log-log for Site",
            size=.7,
-           censor = FALSE)
+           censor = FALSE,
+           linetype = c("solid", "dashed", "dotted"))
 
 ll3_plot <- ll3$plot
 
@@ -389,7 +396,8 @@ ll4 <- ggsurvplot(km_fit2,
            legend.labs = c("Standard", "Test"),
            title = "log-log for Tx",
            size=.7,
-           censor = FALSE)
+           censor = FALSE,
+           linetype = c("solid", "dashed"))
 
 ll4_plot <- ll4$plot
 
